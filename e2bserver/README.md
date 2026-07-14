@@ -12,9 +12,12 @@ Author: kejiqing
 
 ## Panel
 
+> 国内请用 jsDelivr，避免 `raw.githubusercontent.com` 缓存到旧版（仍默认 podman）。
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/passionke/deploy-all-in-one/main/e2bserver/bootstrap-panel.sh \
+curl -fsSL https://cdn.jsdelivr.net/gh/passionke/deploy-all-in-one@main/e2bserver/bootstrap-panel.sh \
   -o bootstrap-panel.sh
+grep 'RUNTIME=' bootstrap-panel.sh | head -1   # 应为 ...:-docker}
 
 E2B_IMAGE_TAG=release-v1.0.1 bash bootstrap-panel.sh
 
@@ -22,12 +25,12 @@ E2B_IMAGE_TAG=release-v1.0.1 bash bootstrap-panel.sh
 cat /opt/e2bserver/config/.worker-token
 ```
 
-默认安装目录：`/opt/e2bserver`。
+默认安装目录：`/opt/e2bserver`。默认容器运行时：**docker**。
 
 ## Worker（在 Worker 本机）
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/passionke/deploy-all-in-one/main/e2bserver/bootstrap-worker.sh \
+curl -fsSL https://cdn.jsdelivr.net/gh/passionke/deploy-all-in-one@main/e2bserver/bootstrap-worker.sh \
   -o bootstrap-worker.sh
 
 E2B_IMAGE_TAG=release-v1.0.1 \

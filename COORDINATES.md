@@ -9,6 +9,14 @@
 
 ## 坐标 URL 模板
 
+优先（国内）：
+
+```
+https://cdn.jsdelivr.net/gh/passionke/deploy-all-in-one@main/<coord>/<script>.sh
+```
+
+备选：
+
 ```
 https://raw.githubusercontent.com/passionke/deploy-all-in-one/main/<coord>/<script>.sh
 ```
@@ -16,6 +24,6 @@ https://raw.githubusercontent.com/passionke/deploy-all-in-one/main/<coord>/<scri
 示例：
 
 ```
-https://raw.githubusercontent.com/passionke/deploy-all-in-one/main/e2bserver/bootstrap-panel.sh
-https://raw.githubusercontent.com/passionke/deploy-all-in-one/main/e2bserver/bootstrap-worker.sh
+https://cdn.jsdelivr.net/gh/passionke/deploy-all-in-one@main/e2bserver/bootstrap-panel.sh
+https://cdn.jsdelivr.net/gh/passionke/deploy-all-in-one@main/e2bserver/bootstrap-worker.sh
 ```

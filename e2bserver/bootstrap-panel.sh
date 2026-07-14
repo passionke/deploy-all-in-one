@@ -3,7 +3,7 @@
 #
 # 项目坐标：e2bserver（公开仓 passionke/deploy-all-in-one）
 #
-#   curl -fsSL https://raw.githubusercontent.com/passionke/deploy-all-in-one/main/e2bserver/bootstrap-panel.sh \
+#   curl -fsSL https://cdn.jsdelivr.net/gh/passionke/deploy-all-in-one@main/e2bserver/bootstrap-panel.sh \
 #     -o bootstrap-panel.sh
 #   E2B_IMAGE_TAG=release-v1.0.1 bash bootstrap-panel.sh
 #
@@ -11,6 +11,7 @@
 #   E2B_IMAGE_TAG          必填推荐：release-v1.0.1（与发版 tag 一致）
 #   E2B_INSTALL_DIR        默认 /opt/e2bserver
 #   E2B_CONTAINER_RUNTIME  docker|podman，默认 docker（线上）
+# script-rev: 2026-07-14-docker-default
 #   E2B_SANDBOX_DOMAIN     默认 supone.top
 #   E2B_WORKER_TOKEN       可选；不设则生成并写入 config/.worker-token
 #   ACR_REGISTRY / ACR_USERNAME / ACR_PASSWORD  私有仓时需要
@@ -206,7 +207,7 @@ main() {
   echo "  worker token:      $token"
   echo ""
   echo "next (Worker host — coord e2bserver):"
-  echo "  curl -fsSL https://raw.githubusercontent.com/passionke/deploy-all-in-one/main/e2bserver/bootstrap-worker.sh -o bootstrap-worker.sh"
+  echo "  curl -fsSL https://cdn.jsdelivr.net/gh/passionke/deploy-all-in-one@main/e2bserver/bootstrap-worker.sh -o bootstrap-worker.sh"
   echo "  E2B_IMAGE_TAG=$(image_tag) E2B_PANEL_URL='http://<panel-ip>:3000' \\"
   echo "    E2B_WORKER_TOKEN='$token' E2B_ADVERTISE_HOST='<worker-ip>' \\"
   echo "    bash bootstrap-worker.sh"

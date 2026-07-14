@@ -32,11 +32,14 @@ deploy-all-in-one/
 
 ## 生产最小用法（无 git clone 业务仓）
 
-只需 curl 某坐标下的脚本，例如 E2B Panel：
+> **国内建议用 jsDelivr**（`raw.githubusercontent.com` 易缓存旧脚本）。
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/passionke/deploy-all-in-one/main/e2bserver/bootstrap-panel.sh \
+curl -fsSL https://cdn.jsdelivr.net/gh/passionke/deploy-all-in-one@main/e2bserver/bootstrap-panel.sh \
   -o bootstrap-panel.sh
+# 确认默认已是 docker：
+grep 'RUNTIME=' bootstrap-panel.sh | head -1
+
 E2B_IMAGE_TAG=release-v1.0.1 bash bootstrap-panel.sh
 ```
 
