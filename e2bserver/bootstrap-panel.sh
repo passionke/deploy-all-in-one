@@ -3,21 +3,37 @@
 #
 # 项目坐标：e2bserver（公开仓 passionke/deploy-all-in-one）
 #
-#   curl -fsSL https://cdn.jsdelivr.net/gh/passionke/deploy-all-in-one@main/e2bserver/bootstrap-panel.sh \
-#     -o bootstrap-panel.sh
-#   E2B_IMAGE_TAG=release-v1.0.1 bash bootstrap-panel.sh
+# 用法：
+#   bash bootstrap-panel.sh release-v1.0.1
 #
 # 配置单一真相：INSTALL_DIR/config/deploy.toml
-#   - 文件已存在 → 只升级二进制/镜像并重启，绝不覆盖配置
-#   - 首次安装 → 写默认 deploy.toml（域名等请直接改这个文件，然后重启）
+#   - 已存在 → 绝不覆盖（域名/NAS/api_key 只改这个文件）
+#   - 首次 → 写默认文件，再自行编辑
 #
-# Env（尽量少）：
-#   E2B_IMAGE_TAG          推荐：release-v1.0.1
-#   E2B_INSTALL_DIR        默认 /opt/e2bserver
-#   E2B_CONTAINER_RUNTIME  默认 docker
-#   ACR_USERNAME / ACR_PASSWORD  仅私有 ACR 需要
-# script-rev: 2026-07-14-config-first
+# 可选 .env（cwd 或脚本旁）：E2B_INSTALL_DIR / ACR_* 等稳定项
+# 版本只走命令行参数。
+# script-rev: 2026-07-14-cli-tag-dotenv
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+die() { echo "error: $*" >&2; exit 1; }
+
+load_dotenv() {
+  local f
+  for f in "${PWD}/.env" "${SCRIPT_DIR}/.env"; do
+    if [[ -f "$f" ]]; then
+      set -a
+      # shellcheck disable=SC1090
+      source "$f"
+      set +a
+      echo "==> loaded $f"
+      return 0
+    fi
+  done
+}
+
+load_dotenv
 
 RUNTIME="${E2B_CONTAINER_RUNTIME:-docker}"
 export E2B_CONTAINER_RUNTIME="$RUNTIME"
@@ -26,8 +42,6 @@ TOKEN_FILE="$INSTALL_DIR/config/.worker-token"
 PANEL_CONFIG="$INSTALL_DIR/config/deploy.toml"
 PANEL_LOG="$INSTALL_DIR/e2bserver.log"
 ACR_REGISTRY="${ACR_REGISTRY:-crpi-cf9vxpq3n8or17mw.cn-hangzhou.personal.cr.aliyuncs.com/passionke}"
-
-die() { echo "error: $*" >&2; exit 1; }
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
   die "macOS cannot use ACR Linux binary — run on a Linux Panel host"
@@ -45,10 +59,12 @@ detect_arch_tag() {
   esac
 }
 
-image_tag() {
-  if [[ -n "${E2B_IMAGE_TAG:-}" ]]; then
-    echo "$E2B_IMAGE_TAG"
+resolve_image_tag() {
+  local arg="${1:-}"
+  if [[ -n "$arg" ]]; then
+    echo "$arg"
   else
+    echo "==> warning: no tag arg, using arch $(detect_arch_tag)" >&2
     detect_arch_tag
   fi
 }
@@ -61,8 +77,7 @@ acr_login_if_needed() {
 }
 
 pull_and_extract() {
-  local tag ref cid
-  tag="$(image_tag)"
+  local tag="$1" ref cid
   ref="${ACR_REGISTRY%/}/e2b-binaries:${tag}"
   echo "==> pull $ref"
   acr_login_if_needed
@@ -79,8 +94,7 @@ pull_and_extract() {
 }
 
 pull_base() {
-  local tag ref
-  tag="$(image_tag)"
+  local tag="$1" ref
   ref="${ACR_REGISTRY%/}/e2b-base:${tag}"
   echo "==> pull $ref"
   acr_login_if_needed
@@ -89,7 +103,6 @@ pull_base() {
   echo "==> e2b-base:latest ← $ref"
 }
 
-# Read worker_token from existing deploy.toml [cluster] if present.
 read_cluster_token() {
   [[ -f "$PANEL_CONFIG" ]] || return 0
   awk '
@@ -125,18 +138,16 @@ ensure_token() {
   echo "$token"
 }
 
-# Config-first: never overwrite an existing deploy.toml.
 write_config_if_missing() {
   local token="$1"
   if [[ -f "$PANEL_CONFIG" ]]; then
     echo "==> keep existing config: $PANEL_CONFIG"
-    echo "    (edit sandbox_domain / api_key / nas here; re-run bootstrap only upgrades binaries)"
     return 0
   fi
 
   cat >"$PANEL_CONFIG" <<EOF
 # generated once by bootstrap-panel.sh — Author: kejiqing
-# Single source of truth. Edit this file for domain / keys / NAS; bootstrap will not overwrite it.
+# Edit this file for domain / keys / NAS; bootstrap will not overwrite it.
 api_key = "e2b_53ae1fed82754c17ad8077fbc8bcdd90"
 api_addr = "0.0.0.0:3000"
 proxy_addr = "0.0.0.0:3002"
@@ -158,7 +169,7 @@ worker_token = "$token"
 [nas]
 server = "nfs.supone.top"
 export = "/mnt/NAS0/nfs-export"
-host_mount_root = "/mnt/nas0"
+host_mount_root = ""
 nfs_version = "3"
 sandbox_inject = "bind"
 mount_options_linux = "vers=3,nolock,rw,hard,intr"
@@ -183,7 +194,6 @@ oss_context_ttl_days = 30
 EOF
   chmod 600 "$PANEL_CONFIG"
   echo "==> wrote first-time config: $PANEL_CONFIG"
-  echo "    set sandbox_domain in this file (e.g. prod.spone.xyz), then restart / re-run bootstrap"
 }
 
 start_panel() {
@@ -196,7 +206,7 @@ start_panel() {
   echo "==> e2bserver pid=$pid config=$PANEL_CONFIG log=$PANEL_LOG"
 
   local i
-  for i in $(seq 1 40); do
+  for i in $(seq 1 80); do
     if curl -sf http://127.0.0.1:3000/healthz >/dev/null 2>&1; then
       echo "==> healthz ok"
       return 0
@@ -207,28 +217,45 @@ start_panel() {
   die "healthz timeout — see $PANEL_LOG"
 }
 
+usage() {
+  cat <<'EOF'
+Usage: bash bootstrap-panel.sh <release-tag>
+
+  Example:
+    bash bootstrap-panel.sh release-v1.0.1
+
+  Domain / NAS / api_key: edit INSTALL_DIR/config/deploy.toml only
+EOF
+}
+
 main() {
+  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
+
   require_cmd curl
   require_cmd "$RUNTIME"
-  [[ -n "${E2B_IMAGE_TAG:-}" ]] || echo "==> warning: E2B_IMAGE_TAG unset, using arch tag $(detect_arch_tag)"
+
+  local tag
+  tag="$(resolve_image_tag "${1:-}")"
 
   echo "==> install dir: $INSTALL_DIR"
-  echo "==> image tag: $(image_tag) (ACR_REGISTRY=$ACR_REGISTRY)"
+  echo "==> image tag: $tag (ACR_REGISTRY=$ACR_REGISTRY)"
 
-  pull_and_extract
-  pull_base
+  pull_and_extract "$tag"
+  pull_base "$tag"
 
   local token
   token="$(ensure_token)"
   write_config_if_missing "$token"
-  # token file always mirrors config (after first write, read again)
   token="$(ensure_token)"
   start_panel
 
   echo ""
   echo "panel ready."
   echo "  admin:  http://127.0.0.1:3000/admin"
-  echo "  config: $PANEL_CONFIG   ← edit sandbox_domain / keys here only"
+  echo "  config: $PANEL_CONFIG"
   echo "  worker token: $token"
 }
 
