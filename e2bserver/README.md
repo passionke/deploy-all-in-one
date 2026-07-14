@@ -6,7 +6,7 @@ Author: kejiqing
 
 ## 前置
 
-- Linux + `podman` 或 `docker` + `curl`
+- Linux + **`docker`**（默认；也可用 `E2B_CONTAINER_RUNTIME=podman`）+ `curl`
 - 发版 tag 的 Build CI 已成功（ACR 能拉到镜像）
 - 本仓库为公开仓，生产可直接 curl
 

@@ -10,13 +10,13 @@
 # Env:
 #   E2B_IMAGE_TAG          必填推荐：release-v1.0.1（与发版 tag 一致）
 #   E2B_INSTALL_DIR        默认 /opt/e2bserver
-#   E2B_CONTAINER_RUNTIME  podman|docker，默认 podman
+#   E2B_CONTAINER_RUNTIME  docker|podman，默认 docker（线上）
 #   E2B_SANDBOX_DOMAIN     默认 supone.top
 #   E2B_WORKER_TOKEN       可选；不设则生成并写入 config/.worker-token
 #   ACR_REGISTRY / ACR_USERNAME / ACR_PASSWORD  私有仓时需要
 set -euo pipefail
 
-RUNTIME="${E2B_CONTAINER_RUNTIME:-podman}"
+RUNTIME="${E2B_CONTAINER_RUNTIME:-docker}"
 export E2B_CONTAINER_RUNTIME="$RUNTIME"
 INSTALL_DIR="${E2B_INSTALL_DIR:-/opt/e2bserver}"
 SANDBOX_DOMAIN="${E2B_SANDBOX_DOMAIN:-supone.top}"
